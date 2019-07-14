@@ -1,0 +1,1 @@
+ifupdown2用于替换ifupdown，用于实现debian系统中的/etc/network/interface文件解析及配置执行
