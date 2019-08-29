@@ -81,10 +81,12 @@ class ifaceScheduler():
                 query_ifaceobj.set_state_n_status(ifaceState.from_str(op),
                                                   ifaceStatus.NOTFOUND)
                 return
+        #遍历每个op对应的module
         for mname in ifupdownobj.module_ops.get(op):
             m = ifupdownobj.modules.get(mname)
             err = 0
             try:
+                #执行此模块的run函数
                 if hasattr(m, 'run'):
                     msg = ('%s: %s : running module %s' %(ifacename, op, mname))
                     if op == 'query-checkcurr':
@@ -121,8 +123,10 @@ class ifaceScheduler():
                     ifaceobj.set_state_n_status(ifaceState.from_str(op),
                                                 status)
 
+        #考虑bash脚本支持
         if ifupdownobj.config.get('addon_scripts_support', '0') == '1':
             # execute /etc/network/ scripts
+            # 传入接口对应的信息
             os.environ['IFACE'] = ifaceobj.name if ifaceobj.name else ''
             os.environ['LOGICAL'] = ifaceobj.name if ifaceobj.name else ''
             os.environ['METHOD'] = ifaceobj.addr_method if ifaceobj.addr_method else ''
@@ -131,6 +135,7 @@ class ifaceScheduler():
                 ifupdownobj.logger.debug('%s: %s : running script %s'
                     %(ifacename, op, mname))
                 try:
+                    #执行此op对应的shell脚本
                     utils.exec_command(mname, env=cenv)
                 except Exception, e:
                     if "permission denied" in str(e).lower():
@@ -176,6 +181,7 @@ class ifaceScheduler():
                     pass
             for ifaceobj in ifaceobjs:
                 cls.run_iface_op(ifupdownobj, ifaceobj, op,
+                    #传入执行操作需要的环境变量
                     cenv=ifupdownobj.generate_running_env(ifaceobj, op)
                         if ifupdownobj.config.get('addon_scripts_support',
                             '0') == '1' else None)

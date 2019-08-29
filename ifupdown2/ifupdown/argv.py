@@ -55,16 +55,20 @@ class Parse:
     }
 
     def __init__(self, argv):
+        #取可执行程序名称（ifup,ifdown,ifreload,ifquery)
         self.executable_name = argv[0]
         self.op = self.get_op()
         self.argv = argv[1:]
 
+        #各op对应的帮助信息
         if self.op == 'query':
             descr = 'query interfaces (all or interface list)'
         elif self.op == 'reload':
             descr = 'reload interface configuration.'
         else:
             descr = 'interface management'
+            
+        #准备解析参数
         argparser = argparse.ArgumentParser(description=descr)
         if self.op == 'reload':
             self.update_ifreload_argparser(argparser)
@@ -76,10 +80,13 @@ class Parse:
                 self.update_ifdown_argparser(argparser)
             elif self.op == 'query':
                 self.update_ifquery_argparser(argparser)
+        #各操作公用参数
         self.update_common_argparser(argparser)
         argcomplete.autocomplete(argparser)
+        #参数解析
         self.args = argparser.parse_args(self.argv)
 
+    #参数校验
     def validate(self):
         if self.op == 'query' and (self.args.syntaxhelp or self.args.list):
             return True
@@ -100,6 +107,7 @@ class Parse:
     def get_op(self):
         try:
             for key, value in self.valid_ops.iteritems():
+                #如果可执行程序名称以key结尾，则返回相应key
                 if self.executable_name.endswith(key):
                     return value
         except:
@@ -108,6 +116,7 @@ class Parse:
     def get_args(self):
         return self.args
 
+    #准备up,down,query对应的常规参数
     def update_argparser(self, argparser):
         """ base parser, common to all commands """
         argparser.add_argument('-a', '--all', action='store_true', required=False,
@@ -149,6 +158,7 @@ class Parse:
         group.add_argument('--no-scripts', '--admin-state', dest='noaddons', action='store_true',
                            help='dont run any addon modules/scripts. Only bring the interface administratively up/down')
 
+    #ifup参数特有参数
     def update_ifup_argparser(self, argparser):
         argparser.add_argument('-s', '--syntax-check', dest='syntaxcheck',
                                action='store_true', help='Only run the interfaces file parser')
@@ -159,6 +169,7 @@ class Parse:
                                     'disable this default behaviour')
         self.update_ifupdown_argparser(argparser)
 
+    #ifdown操作专有参数
     def update_ifdown_argparser(self, argparser):
         self.update_ifupdown_argparser(argparser)
         argparser.add_argument('-u', '--use-current-config',
@@ -168,6 +179,7 @@ class Parse:
                                     'Useful when your state file is corrupted or you want down to use '
                                     'the latest from the interfaces file')
 
+    #ifquery操作专用参数
     def update_ifquery_argparser(self, argparser):
         """ arg parser for ifquery options """
 
@@ -191,6 +203,7 @@ class Parse:
                                help='check policy default file contents, for unconfigured attributes, '
                                     'against running state of an interface')
 
+    #准备ifreload参数
     def update_ifreload_argparser(self, argparser):
         """ parser for ifreload """
         group = argparser.add_mutually_exclusive_group(required=True)
@@ -225,6 +238,7 @@ class Parse:
         argparser.add_argument('-s', '--syntax-check', dest='syntaxcheck', action='store_true',
                                help='Only run the interfaces file parser')
 
+    #准备各操作公用参数
     def update_common_argparser(self, argparser):
         ''' general parsing rules '''
 

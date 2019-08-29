@@ -50,11 +50,13 @@ class Ifupdown2:
             'reload': self.run_reload
         }
 
+    #参数解析及校验
     def parse_argv(self, argv):
         args_parse = Parse(argv)
         args_parse.validate()
 
         self.args = args_parse.get_args()
+        #记录当前正在进行的操作
         self.op = args_parse.get_op()
 
     def update_logger(self, socket=None):
@@ -65,11 +67,13 @@ class Ifupdown2:
         if socket:
             log.set_socket(socket)
 
+    #ifupdown2操作入口
     def main(self, stdin_buffer=None):
         if self.op != 'query' and self.uid != 0:
             raise Exception('must be root to run this command')
 
         try:
+            #读取配置文件，并按op调用相应的处理函数
             self.read_config()
             self.init(stdin_buffer)
             self.handlers.get(self.op)(self.args)
@@ -110,6 +114,7 @@ class Ifupdown2:
             self.interfaces_filename = configmap_g.get('default_interfaces_configfile',
                                                        '/etc/network/interfaces')
 
+    #读取ifupdlown2配置文件
     def read_config(self):
         global configmap_g
 
@@ -119,6 +124,7 @@ class Ifupdown2:
         configFP = StringIO.StringIO(configStr)
         parser = ConfigParser.RawConfigParser()
         parser.readfp(configFP)
+        #获得配置的key,value队
         configmap_g = dict(parser.items('ifupdown2'))
 
         # Preprocess config map
@@ -140,6 +146,7 @@ class Ifupdown2:
             # reset link_master_slave if delay_admin_state_change is on
             configmap_g['link_master_slave'] = '0'
 
+    #执行ifup命令
     def run_up(self, args):
         log.debug('args = %s' % str(args))
 

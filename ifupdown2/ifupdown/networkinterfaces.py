@@ -28,6 +28,7 @@ whitespaces = '\n\t\r '
 class networkInterfaces():
     """ debian ifupdown /etc/network/interfaces file parser """
 
+    #各协议支持的method
     _addrfams = {'inet' : ['static', 'manual', 'loopback', 'dhcp', 'dhcp6', 'ppp', 'tunnel'],
                  'inet6' : ['static', 'manual', 'loopback', 'dhcp', 'dhcp6', 'ppp', 'tunnel']}
 
@@ -51,18 +52,20 @@ class networkInterfaces():
         Raises:
             AttributeError, KeyError """
 
+        #auto关键字指定的接口
         self.auto_ifaces = []
         self.callbacks = {}
         self.auto_all = False
 
         self.logger = logging.getLogger('ifupdown.' +
                     self.__class__.__name__)
-        self.callbacks = {'iface_found' : None,
-                          'validateifaceattr' : None,
+        self.callbacks = {'iface_found' : None,#iface解释成功钩子
+                          'validateifaceattr' : None,#iface属性校验
                           'validateifaceobj' : None}
         self.allow_classes = {}
         self.interfacesfile = interfacesfile
         self.interfacesfileiobuf = interfacesfileiobuf
+        #接口配置文件格式
         self.interfacesfileformat = interfacesfileformat
         self._filestack = [self.interfacesfile]
 
@@ -98,6 +101,7 @@ class networkInterfaces():
             self.logger.warn('%s: line%d: %s' %(filename, lineno, msg))
         self.warns += 1
 
+    #校验配置的family及method是否正确
     def _validate_addr_family(self, ifaceobj, lineno=-1):
         for family in ifaceobj.addr_family:
             if not self._addrfams.get(family):
@@ -116,6 +120,7 @@ class networkInterfaces():
             else:
                 ifaceobj.addr_method = 'static'
 
+    #为iface的注册相应回调，例如属性校验，iface配置校验
     def subscribe(self, callback_name, callback_func):
         """This member function registers callback functions.
 
@@ -157,17 +162,25 @@ class networkInterfaces():
                 self.allow_classes[allow_class] = ifacenames
         return 0
 
+    #执行source关键字的解析
+    #lines 配置内容
+    #cur_idx当前行号
+    #lineno当前行号
     def process_source(self, lines, cur_idx, lineno):
         # Support regex
         self.logger.debug('processing sourced line ..\'%s\'' %lines[cur_idx])
+        #获取source对应的文件
         sourced_file = re.split(self._ws_split_regex, lines[cur_idx], 2)[1]
         if sourced_file:
+            #采用通配的方式，匹配命中的文件
             filenames = glob.glob(sourced_file)
             if not filenames:
+                #文件不存在，如果无通配符，则告警
                 if '*' not in sourced_file:
                     self._parse_warn(self._currentfile, lineno,
                             'cannot find source file %s' %sourced_file)
                 return 0
+            #遍历命中的文件，并读取解析（递归解析，这里有个bug,如果引用导致循环，则停不下来）
             for f in filenames:
                 self.read_file(f)
         else:
@@ -175,9 +188,11 @@ class networkInterfaces():
                     'unable to read source line')
         return 0
 
+    #处理auto关键字
     def process_auto(self, lines, cur_idx, lineno):
         auto_ifaces = re.split(self._ws_split_regex, lines[cur_idx])[1:]
         if not auto_ifaces:
+            #auto之后必须给接口名称
             self._parse_error(self._currentfile, lineno,
                     'invalid auto line \'%s\''%lines[cur_idx])
             return 0
@@ -187,6 +202,7 @@ class networkInterfaces():
                 break
             r = utils.parse_iface_range(a)
             if r:
+                #支持range方式
                 if len(r) == 3:
                     # eg swp1.[2-4], r = "swp1.", 2, 4)
                     for i in range(r[1], r[2]+1):
@@ -195,6 +211,7 @@ class networkInterfaces():
                     for i in range(r[1], r[2]+1):
                         # eg swp[2-4].100, r = ("swp", 2, 4, ".100")
                         self.auto_ifaces.append('%s%d%s' %(r[0], i, r[3]))
+            #添加auto ifaces
             self.auto_ifaces.append(a)
         return 0
 
@@ -202,6 +219,7 @@ class networkInterfaces():
                              attrval, lineno):
         newattrname = attrname.replace("_", "-")
         try:
+            #对属性进行校验
             if not self.callbacks.get('validateifaceattr')(newattrname,
                                       attrval):
                 self._parse_error(self._currentfile, lineno,
@@ -223,14 +241,17 @@ class networkInterfaces():
             # get the index corresponding to the 'address'
             addrlist = iface_config.get('address')
             if addrlist:
+                # 以上参数仅修饰最后一个address属性
                 # find the index of last address element
                 for i in range(0, len(addrlist) - len(attrvallist) -1):
                     attrvallist.append('')
                 attrvallist.append(attrval)
                 iface_config[newattrname] = attrvallist
         elif not attrvallist:
+            #之前未用，直接设置
             iface_config[newattrname] = [attrval]
         else:
+            #之前已有，且非特别attrname,直接append
             iface_config[newattrname].append(attrval)
 
     def parse_iface(self, lines, cur_idx, lineno, ifaceobj):
@@ -239,8 +260,10 @@ class networkInterfaces():
 
         iface_line = lines[cur_idx].strip(whitespaces)
         iface_attrs = re.split(self._ws_split_regex, iface_line)
+        #取iface指定的接口名称
         ifacename = iface_attrs[1]
 
+        #接口名称长度检查（range除外）
         if (not utils.is_ifname_range(ifacename) and
             utils.check_ifname_size_invalid(ifacename)):
             self._parse_warn(self._currentfile, lineno,
@@ -262,21 +285,27 @@ class networkInterfaces():
         for line_idx in range(cur_idx + 1, len(lines)):
             l = lines[line_idx].strip(whitespaces)
             if self.ignore_line(l) == 1:
+                #针对空行，注释行，仅加入不处理
                 ifaceobj.raw_config.append(l)
                 continue
+            #将l打散成token
             attrs = re.split(self._ws_split_regex, l, 1)
             if self._is_keyword(attrs[0]):
+                #如果此token为关键字，需要将此行回滚，iface处理结束
                 line_idx -= 1
                 break
             # if not a keyword, every line must have at least a key and value
+            # 如注释所言，此行确认为iface的配置，要求必须至少有key及value
             if len(attrs) < 2:
                 self._parse_error(self._currentfile, line_idx,
                         'iface %s: invalid syntax \'%s\'' %(ifacename, l))
                 continue
+            
             ifaceobj.raw_config.append(l)
             attrname = attrs[0]
             # preprocess vars (XXX: only preprocesses $IFACE for now)
             attrval = re.sub(r'\$IFACE', ifacename, attrs[1])
+            #收集配置的key,value
             self._add_to_iface_config(ifacename, iface_config, attrname,
                                       attrval, line_idx+1)
         lines_consumed = line_idx - cur_idx
@@ -291,6 +320,7 @@ class networkInterfaces():
         ifaceobj.generate_env()
 
         try:
+            #设置地址类别，地址配置方式
             if iface_attrs[2]:
                 ifaceobj.addr_family.append(iface_attrs[2])
             ifaceobj.addr_method = iface_attrs[3]
@@ -318,7 +348,9 @@ class networkInterfaces():
 
         return ifaceobj_new
 
+    #处理iface关键字
     def process_iface(self, lines, cur_idx, lineno):
+        #解析iface配置，生成iface对象
         ifaceobj = iface()
         lines_consumed = self.parse_iface(lines, cur_idx, lineno, ifaceobj)
 
@@ -349,6 +381,7 @@ class networkInterfaces():
                                         ifacename, ifaceobj.type, flags)
                     self.callbacks.get('iface_found')(ifaceobj_new)
         else:
+            #触发iface_found事件
             self.callbacks.get('iface_found')(ifaceobj)
 
         return lines_consumed       # Return next index
@@ -384,12 +417,13 @@ class networkInterfaces():
 
         return lines_consumed       # Return next index
 
-    network_elems = { 'source'      : process_source,
+    network_elems = { 'source'      : process_source,#加载给出的文件
                       'allow'      : process_allow,
-                      'auto'        : process_auto,
+                      'auto'        : process_auto, #支持atuo关键字，收集接口名称，支持range方式
                       'iface'       : process_iface,
                       'vlan'       : process_vlan}
 
+    #检查str是否为network_elems成员
     def _is_keyword(self, str):
         # The additional split here is for allow- keyword
         if (str in self.network_elems.keys() or
@@ -397,6 +431,7 @@ class networkInterfaces():
             return 1
         return 0
 
+    #获得/etc/network/interface的首token的处理函数
     def _get_keyword_func(self, str):
         tmp_str = str.split('-')[0]
         return self.network_elems.get(tmp_str)
@@ -408,26 +443,35 @@ class networkInterfaces():
                 classes.append(class_name)
         return classes
 
+    #处理加载的interfaces文件内容
     def process_interfaces(self, filedata):
 
         # process line continuations
+        # 解续行符，合并成一行（续行符后的\n,将被d.strip()移除掉）
         filedata = ' '.join(d.strip() for d in filedata.split('\\'))
 
         line_idx = 0
         lines_consumed = 0
         raw_config = filedata.split('\n')
         lines = [l.strip(whitespaces) for l in raw_config]
+        #遍历配置文件的每一行
         while (line_idx < len(lines)):
+            #忽略空行，注释行
             if self.ignore_line(lines[line_idx]):
                 line_idx += 1
                 continue
+            #将行配置打散成token
             words = re.split(self._ws_split_regex, lines[line_idx])
             if not words:
+                #排除空行
                 line_idx += 1
                 continue
             # Check if first element is a supported keyword
+            # 检查首token是否为支持的token
             if self._is_keyword(words[0]):
+                #取token对应的解析函数
                 keyword_func = self._get_keyword_func(words[0])
+                #执行解析
                 lines_consumed = keyword_func(self, lines, line_idx, line_idx+1)
                 line_idx += lines_consumed
             else:
@@ -436,6 +480,7 @@ class networkInterfaces():
             line_idx += 1
         return 0
 
+    #加载文件内容到filedata中
     def read_filedata(self, filedata):
         self._currentfile_has_template = False
         # run through template engine
@@ -468,6 +513,7 @@ class networkInterfaces():
         self._filestack.append(filename)
         self.logger.info('processing interfaces file %s' %filename)
         try:
+            #加载文件内容到filedata
             with open(filename) as f:
                 filedata = f.read()
         except Exception, e:
@@ -501,6 +547,7 @@ class networkInterfaces():
                 self.callbacks.get('iface_found')(ifaceobj)
         self.errors += errors
 
+    #加载接口配置文件
     def load(self):
         """ This member function loads the networkinterfaces file.
 
@@ -516,5 +563,6 @@ class networkInterfaces():
         if self.interfacesfileformat == 'json':
             return self.read_file_json(self.interfacesfile,
                                        self.interfacesfileiobuf)
+        #非json格式的接口配置文件，读取它
         return self.read_file(self.interfacesfile,
                               self.interfacesfileiobuf)

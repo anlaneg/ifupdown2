@@ -83,6 +83,7 @@ class ifacePrivFlags():
 class ifupdownMain(ifupdownBase):
     """ ifupdown2 main class """
 
+    #脚本目录
     scripts_dir = '/etc/network'
     addon_modules_dir = ADDON_MODULES_DIR
     addon_modules_configfile = ADDONS_CONF_PATH
@@ -237,6 +238,7 @@ class ifupdownMain(ifupdownBase):
                                   ('post-down', [])])
 
         # For old style /etc/network/ bash scripts
+        # 记录各ops对应的脚本操作
         self.script_ops = OrderedDict([('pre-up', []),
                                   ('up', []),
                                   ('post-up', []),
@@ -260,6 +262,7 @@ class ifupdownMain(ifupdownBase):
         self.flags = ifupdownMainFlags()
 
         self.flags.STATEMANAGER_ENABLE = statemanager_enable
+        #接口配置文件
         self.interfacesfile = interfacesfile
         self.interfacesfileiobuf = interfacesfileiobuf
         self.interfacesfileformat = interfacesfileformat
@@ -280,8 +283,10 @@ class ifupdownMain(ifupdownBase):
         self.overridden_ifupdown_scripts = []
 
         if self.config.get('addon_python_modules_support', '1') == '1':
+            #加载python modules
             self.load_addon_modules(self.addon_modules_dir)
         if self.config.get('addon_scripts_support', '0') == '1':
+            #加载脚本
             self.load_scripts(self.scripts_dir)
         self.dependency_graph = OrderedDict({})
 
@@ -328,6 +333,7 @@ class ifupdownMain(ifupdownBase):
         self._ifaceobj_squash_internal = True if self.config.get(
                             'ifaceobj_squash_internal', '1') == '1' else False
 
+        #支持的接口配置中的keywords
         self.validate_keywords = {
             '<mac>': self._keyword_mac,
             '<text>': self._keyword_text,
@@ -1263,6 +1269,7 @@ class ifupdownMain(ifupdownBase):
                         template_enable=self.config.get('template_enable', 0),
                         template_engine=self.config.get('template_engine'),
                 template_lookuppath=self.config.get('template_lookuppath'))
+        #注册iface钩子点
         if self._ifaceobj_squash or self._ifaceobj_squash_internal:
             nifaces.subscribe('iface_found', self._save_iface_squash)
         else:
@@ -1271,6 +1278,7 @@ class ifupdownMain(ifupdownBase):
             nifaces.subscribe('validateifaceattr',
                               self._iface_configattr_syntax_checker)
             nifaces.subscribe('validateifaceobj', self._ifaceobj_syntax_checker)
+        #装载所有接口配置
         nifaces.load()
         if nifaces.errors or nifaces.warns:
             ret = False
@@ -1420,9 +1428,11 @@ class ifupdownMain(ifupdownBase):
 
         self.logger.info('looking for user scripts under %s' %modules_dir)
         for op, mlist in self.script_ops.items():
+            #各操作对应的脚本目录
             msubdir = modules_dir + '/if-%s.d' %op
             self.logger.info('loading scripts under %s ...' %msubdir)
             try:
+                #取出所有脚本目录下的列表
                 module_list = os.listdir(msubdir)
                 for module in module_list:
                     if self.modules.get(module) or module in self.overridden_ifupdown_scripts:
@@ -1459,6 +1469,7 @@ class ifupdownMain(ifupdownBase):
                             int(vlan_groups[1])+1)]
         return new_ifacenames
 
+    #展开接口名称，返回有效的接口名称
     def _preprocess_ifacenames(self, ifacenames):
         """ validates interface list for config existance.
 
@@ -1467,6 +1478,7 @@ class ifupdownMain(ifupdownBase):
         """
         new_ifacenames = []
         err_iface = ''
+        #遍历每个接口，针对每个接口对应的obj
         for i in ifacenames:
             ifaceobjs = self.get_ifaceobjs(i)
             if not ifaceobjs:
@@ -1476,8 +1488,10 @@ class ifupdownMain(ifupdownBase):
                     for ri in rendered_ifacenames:
                         ifaceobjs = self.get_ifaceobjs(ri)
                         if not ifaceobjs:
+                            #接口ri未配置，记录错误接口信息
                             err_iface += ' ' + ri
                         else:
+                            #有配置的接口
                             new_ifacenames.append(ri)
                 else:
                     err_iface += ' ' + i
@@ -1544,6 +1558,7 @@ class ifupdownMain(ifupdownBase):
                     i.blacklisted = True
         return ret
 
+    # 将up/down操作对应的start,stop mode上
     def _compat_conv_op_to_mode(self, op):
         """ Returns old op name to work with existing scripts """
         if 'up' in op:
@@ -1553,6 +1568,7 @@ class ifupdownMain(ifupdownBase):
         else:
             return op
 
+    # 产生接口相关的环境变量
     def generate_running_env(self, ifaceobj, op):
         """ Generates a dictionary with env variables required for
         an interface. Used to support script execution for interfaces.
@@ -1561,6 +1577,7 @@ class ifupdownMain(ifupdownBase):
         cenv = None
         iface_env = ifaceobj.get_env()
         if iface_env:
+            #合入os中的环境变量
             cenv = dict(os.environ)
             if cenv:
                 cenv.update(iface_env)
@@ -1594,6 +1611,7 @@ class ifupdownMain(ifupdownBase):
         else:
             self.type = ifaceType.UNKNOWN
 
+    #统一处理队列中的接口up/down操作
     def _process_delay_admin_state_queue(self, op):
         if not self._delay_admin_state_iface_queue:
            return
@@ -1611,6 +1629,7 @@ class ifupdownMain(ifupdownBase):
                 self.logger.warn(str(e))
                 pass
 
+    #ops 要执行的操作序列
     def up(self, ops, auto=False, allow_classes=None, ifacenames=None,
            excludepats=None, printdependency=None, syntaxcheck=False,
            type=None, skipupperifaces=False):
@@ -1638,18 +1657,21 @@ class ifupdownMain(ifupdownBase):
             ifupdownflags.flags.ALL = True
             ifupdownflags.flags.WITH_DEPENDS = True
         try:
+            #读取接口配置
             iface_read_ret = self.read_iface_config()
         except Exception:
             raise
 
         filtered_ifacenames = None
         if ifacenames:
+            #指定执行操作的接口名
             ifacenames = self._preprocess_ifacenames(ifacenames)
 
             if allow_classes:
                 filtered_ifacenames = self._get_filtered_ifacenames_with_classes(auto, allow_classes, excludepats, ifacenames)
 
         # if iface list not given by user, assume all from config file
+        # 没有指定接口名称，假设指定为所有接口
         if not ifacenames: ifacenames = self.ifaceobjdict.keys()
 
         if not filtered_ifacenames:
@@ -1672,6 +1694,7 @@ class ifupdownMain(ifupdownBase):
         # return here because we want to make sure most
         # errors above are caught and reported.
         if syntaxcheck:
+            # 处理仅做语流动检查的ops
             if not self._module_syntax_check(filtered_ifacenames):
                 raise Exception()
             if not iface_read_ret:
@@ -1688,6 +1711,7 @@ class ifupdownMain(ifupdownBase):
                                      if ifupdownflags.flags.WITH_DEPENDS
                                      else False)
         finally:
+            #向kernel通过netlink触发接口up
             self._process_delay_admin_state_queue('up')
             if not ifupdownflags.flags.DRYRUN and self.flags.ADDONS_ENABLE:
                 self._save_state()

@@ -431,8 +431,10 @@ class iface():
 
     def _set_attrs_from_dict(self, attrdict):
         self.auto = attrdict.get('auto', False)
+        #记录接口名称
         self.name = attrdict.get('name')
         self.addr_method = attrdict.get('addr_method')
+        #记录为接口配置的参数
         self.config = attrdict.get('config', OrderedDict())
 
         addr_family = attrdict.get('addr_family')
@@ -535,6 +537,7 @@ class iface():
             self.generate_env()
         return self.env
 
+    #将接口的配置长成为env（‘-’会被更换为'_')
     def generate_env(self):
         """ generate shell environment variables dict interface must execute
         in. This is used to support legacy ifupdown scripts
@@ -543,6 +546,7 @@ class iface():
         config = self.config
         env['IFACE'] = self.name
         for attr, attr_value in config.items():
+            #环境变量的变量名称
             attr_env_name = 'IF_%s' %attr.upper().replace("-", "_")
             env[attr_env_name] = attr_value[0]
         self.env = env

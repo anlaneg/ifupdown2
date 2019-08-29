@@ -218,6 +218,7 @@ class utils():
         # eg: swp1.[2-100]
         # return (prefix, range-start, range-end)
         # eg return ("swp1.", 1, 20, ".100")
+        # 上面的注释给反了，支持 swp[1-20].100这种写法
         range_match = re.match("^([\w]+)\[([\d]+)-([\d]+)\]([\.\w]+)", name)
         if range_match:
             range_groups = range_match.groups()
@@ -236,6 +237,7 @@ class utils():
                             int(range_groups[2], 10))
         return None
 
+    #展开接口名称
     @classmethod
     def expand_iface_range(cls, name):
         ifacenames = []
@@ -258,6 +260,7 @@ class utils():
         return False
 
     @classmethod
+    #接口名称长度检查
     def check_ifname_size_invalid(cls, name=''):
         """ IFNAMSIZ in include/linux/if.h is 16 so we check this """
         IFNAMSIZ = 16
@@ -423,6 +426,7 @@ class utils():
                                        stdin=stdin,
                                        stderr=stderr)
 
+    #shell执行
     @classmethod
     def exec_command(cls, cmd, env=None, close_fds=False, stdout=True,
                      stdin=None, stderr=subprocess.STDOUT):

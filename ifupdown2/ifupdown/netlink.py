@@ -235,6 +235,7 @@ class Netlink(utilsBase):
                             % (ifacename, xfrm_ifacename, xfrm_id, str(e)))
 
     def link_set_updown(self, ifacename, state):
+        #通过netlink设置接口的up/down状态
         self.logger.info('%s: netlink: ip link set dev %s %s'
                          % (ifacename, ifacename, state))
         if ifupdownflags.flags.DRYRUN: return

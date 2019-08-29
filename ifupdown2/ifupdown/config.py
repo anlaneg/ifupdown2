@@ -44,7 +44,7 @@ def get_configuration_file_real_path(path_to_file):
 
     return path_to_file
 
-
+#ifupdown2配置文件
 IFUPDOWN2_CONF_PATH = get_configuration_file_real_path('/etc/network/ifupdown2/ifupdown2.conf')
 ADDONS_CONF_PATH = get_configuration_file_real_path('/etc/network/ifupdown2/addons.conf')
 

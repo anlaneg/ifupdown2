@@ -885,6 +885,7 @@ class NetlinkManager(object):
         bridge_self = False if master else True
         self.vlan_modify(RTM_DELLINK, ifindex, vlanid_start, vlanid_end, bridge_self, master, pvid, untagged)
 
+    # 通过netlink设置接口up/down
     def link_set_updown(self, ifname, state):
         """
         Either bring ifname up or take it down

@@ -48,9 +48,11 @@ class ifupdownBase(object):
         else:
             pass
 
+    #检查ifacename接口是否存在
     def link_exists(self, ifacename):
         return os.path.exists('/sys/class/net/%s' %ifacename)
 
+    #设置link up
     def link_up(self, ifacename):
         netlink.link_set_updown(ifacename, "up")
 

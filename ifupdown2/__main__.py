@@ -179,7 +179,9 @@ def ifupdown2_standalone():
         import ifupdown2.ifupdown.main as main_ifupdown2
     except:
         import ifupdown.main as main_ifupdown2
+    #创建ifupdown2对象
     ifupdown2 = main_ifupdown2.Ifupdown2(daemon=False, uid=os.geteuid())
+    #
     ifupdown2.parse_argv(sys.argv)
     ifupdown2.update_logger()
     return ifupdown2.main()
@@ -188,6 +190,7 @@ def ifupdown2_standalone():
 def main():
     try:
         if 'use_daemon=yes' in open(core_config.IFUPDOWN2_CONF_PATH).read():
+            #采用daemon方式
             return Ifupdown2Client(sys.argv).run()
         else:
             return ifupdown2_standalone()
