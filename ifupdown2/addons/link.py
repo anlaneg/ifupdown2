@@ -58,6 +58,7 @@ class link(moduleBase):
                 return False
         return True
 
+    #仅处理包含link-type,link-down相关的参数
     def _is_my_interface(self, ifaceobj):
         if (ifaceobj.get_attr_value_first('link-type')
                 or ifaceobj.get_attr_value_first('link-down')):
@@ -70,12 +71,16 @@ class link(moduleBase):
         if ifaceobj.get_attr_value_first('link-type'):
             ifaceobj.link_kind = ifaceLinkKind.OTHER
 
+    #preup操作时运行，创建指定link
+    #仅支持创建指定类型的link
+    #ip link add name xx type xx
     def _up(self, ifaceobj):
         link_type = ifaceobj.get_attr_value_first('link-type')
         if link_type:
             self.ipcmd.link_create(ifaceobj.name,
                                    ifaceobj.get_attr_value_first('link-type'))
 
+    #postdown时运行，删除指定link
     def _down(self, ifaceobj):
         if not ifaceobj.get_attr_value_first('link-type'):
             return
@@ -83,6 +88,7 @@ class link(moduleBase):
             not self.ipcmd.link_exists(ifaceobj.name)):
            return
         try:
+            #删除指定link
             self.ipcmd.link_delete(ifaceobj.name)
         except Exception, e:
             self.log_warn(str(e))
@@ -131,10 +137,15 @@ class link(moduleBase):
     def run(self, ifaceobj, operation, query_ifaceobj=None, **extra_args):
         op_handler = self._run_ops.get(operation)
         if not op_handler:
+            #遇到不支持的op
             return
+        
+        #检查interface配置中是否有本addon可处理的参数
         if (operation != 'query-running' and
                 not self._is_my_interface(ifaceobj)):
             return
+        
+        # 初始化LinkUtils
         self._init_command_handlers()
         if operation == 'query-checkcurr':
             op_handler(self, ifaceobj, query_ifaceobj)

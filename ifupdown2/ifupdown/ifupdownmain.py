@@ -86,6 +86,7 @@ class ifupdownMain(ifupdownBase):
     #脚本目录
     scripts_dir = '/etc/network'
     addon_modules_dir = ADDON_MODULES_DIR
+    #addon配置文件
     addon_modules_configfile = ADDONS_CONF_PATH
 
     # Handlers for ops that ifupdown2 owns
@@ -225,6 +226,7 @@ class ifupdownMain(ifupdownBase):
 
         # Dictionary representing operation and modules
         # for every operation
+        # 记录各op对应的modules
         self.module_ops = OrderedDict([('pre-up', []),
                                   ('up', []),
                                   ('post-up', []),
@@ -283,7 +285,7 @@ class ifupdownMain(ifupdownBase):
         self.overridden_ifupdown_scripts = []
 
         if self.config.get('addon_python_modules_support', '1') == '1':
-            #加载python modules
+            #加载python modules(常见/etc/network/ifupdown2/addons)
             self.load_addon_modules(self.addon_modules_dir)
         if self.config.get('addon_scripts_support', '0') == '1':
             #加载脚本
@@ -1292,15 +1294,20 @@ class ifupdownMain(ifupdownBase):
     def _load_addon_modules_config(self):
         """ Load addon modules config file """
 
+        #读取addon配置文件
         with open(self.addon_modules_configfile, 'r') as f:
             lines = f.readlines()
             for l in lines:
                 try:
+                    #打散成单词
                     litems = l.strip(' \n\t\r').split(',')
+                    #跳过不合法的配置及空行
                     if not litems or len(litems) < 2:
                         continue
+                    #取出op及mname
                     operation = litems[0]
                     mname = litems[1]
+                    #记录各op与name之间的映射关系
                     self.module_ops[operation].append(mname)
                 except Exception, e:
                     self.logger.warn('error reading line \'%s\' %s:' %(l, str(e)))
@@ -1324,10 +1331,14 @@ class ifupdownMain(ifupdownBase):
                 for op, mlist in self.module_ops.items():
                     for mname in mlist:
                         if self.modules.get(mname):
+                            #跳过已加载的modules
                             continue
+                        
+                        #加载ifupdown2/addons目录下的对应py
                         mpath = modules_dir + '/' + mname + '.py'
                         if os.path.exists(mpath) and mpath not in failed_import:
                             try:
+                                #加载模块
                                 m = __import__(mname)
                                 mclass = getattr(m, mname)
                             except Exception as e:
@@ -1335,6 +1346,7 @@ class ifupdownMain(ifupdownBase):
                                 failed_import.append(mpath)
                                 continue
                             try:
+                                #实例化模块，入口为与模块同名的类
                                 minstance = mclass()
                                 script_override = minstance.get_overrides_ifupdown_scripts()
                                 self.overridden_ifupdown_scripts.extend(script_override)
@@ -1344,8 +1356,10 @@ class ifupdownMain(ifupdownBase):
                                 continue
                             except:
                                 raise
+                            #模块对应的模块实例
                             self.modules[mname] = minstance
                             try:
+                                #模块对应的modinfo
                                 self.module_attrs[mname] = minstance.get_modinfo()
                             except:
                                 pass

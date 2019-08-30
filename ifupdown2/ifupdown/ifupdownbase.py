@@ -56,5 +56,6 @@ class ifupdownBase(object):
     def link_up(self, ifacename):
         netlink.link_set_updown(ifacename, "up")
 
+    #设置link down
     def link_down(self, ifacename):
         netlink.link_set_updown(ifacename, "down")

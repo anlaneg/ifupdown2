@@ -499,10 +499,12 @@ class iface():
         else:
             self.lowerifaces = [lowerifacename]
 
+    #返回attr_name返回的一组values
     def get_attr_value(self, attr_name):
         """ add to the list of upperifaces """
         return self.config.get(attr_name)
 
+    #取iface指定属性名称对应的第一个value
     def get_attr_value_first(self, attr_name):
         """ get first value of the specified attr name """
         attr_value_list = self.config.get(attr_name)

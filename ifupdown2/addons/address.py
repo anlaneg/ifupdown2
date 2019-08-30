@@ -365,6 +365,7 @@ class address(moduleBase):
             except Exception, e:
                 self.log_error(str(e), ifaceobj)
 
+    # 执行ip地址配置
     def _inet_address_config(self, ifaceobj, ifaceobj_getfunc=None,
                              force_reapply=False):
         squash_addr_config = (True if \
@@ -696,6 +697,7 @@ class address(moduleBase):
             return
         if not self.syntax_check_sysctls(ifaceobj):
             return
+        #为指定接口开启ip-forward
         ipforward = ifaceobj.get_attr_value_first('ip-forward')
         ip6forward = ifaceobj.get_attr_value_first('ip6-forward')
         if ifupdownflags.flags.PERFMODE:
@@ -816,16 +818,20 @@ class address(moduleBase):
 
     def _up(self, ifaceobj, ifaceobj_getfunc=None):
         if not self.ipcmd.link_exists(ifaceobj.name):
+            # 接口不存在，退出
             return
 
         if not self.syntax_check_enable_l3_iface_forwardings(ifaceobj, ifaceobj_getfunc):
             return
 
+        #别名配置
         alias = ifaceobj.get_attr_value_first('alias')
         current_alias = self.ipcmd.link_get_alias(ifaceobj.name)
         if alias and alias != current_alias:
+            #有别名，别名与之不同
             self.ipcmd.link_set_alias(ifaceobj.name, alias)
         elif not alias and current_alias:
+            #当前有别名，配置成无别名
             self.ipcmd.link_set_alias(ifaceobj.name, '')
 
         self._sysctl_config(ifaceobj)
@@ -840,6 +846,7 @@ class address(moduleBase):
                 # any sibling iface objects, kill any stale dhclient
                 # processes
                 dhclientcmd = dhclient()
+                #如果dhcp client在运行，则执行续租
                 if dhclientcmd.is_running(ifaceobj.name):
                     # release any dhcp leases
                     dhclientcmd.release(ifaceobj.name)
@@ -1184,6 +1191,7 @@ class address(moduleBase):
         if not self.ipcmd:
             self.ipcmd = LinkUtils()
 
+    #负责执行地址配置
     def run(self, ifaceobj, operation, query_ifaceobj=None, ifaceobj_getfunc=None):
         """ run address configuration on the interface object passed as argument
 
@@ -1201,14 +1209,17 @@ class address(moduleBase):
                 as user required state in ifaceobj. error otherwise.
         """
         if ifaceobj.type == ifaceType.BRIDGE_VLAN:
+            #不处理bridge_vlan形式iface
            return
         op_handler = self._run_ops.get(operation)
         if not op_handler:
+            #跳过不支的op
             return
         self._init_command_handlers()
         if operation == 'query-checkcurr':
             op_handler(self, ifaceobj, query_ifaceobj,
                        ifaceobj_getfunc=ifaceobj_getfunc)
         else:
+            #处理相应op
             op_handler(self, ifaceobj,
                        ifaceobj_getfunc=ifaceobj_getfunc)

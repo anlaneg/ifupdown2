@@ -34,6 +34,7 @@ class moduleBase(object):
     Provides common infrastructure methods for all addon modules """
 
     def __init__(self, *args, **kargs):
+        #模块名称
         self.modulename = self.__class__.__name__
         self.logger = logging.getLogger('ifupdown.' + self.modulename)
 
@@ -305,11 +306,13 @@ class moduleBase(object):
             return None
         return None
 
+    #设置sysctl配置项
     def sysctl_set(self, variable, value):
         """ set sysctl variable to value passed as argument """
         utils.exec_command('%s %s=%s' %
                            (utils.sysctl_cmd, variable, value))
 
+    #获取sysctl配置项取值
     def sysctl_get(self, variable):
         """ get value of sysctl variable """
         output = utils.exec_command('%s %s' %
@@ -329,16 +332,20 @@ class moduleBase(object):
 
         return self._bridge_stp_user_space
 
+    #设置attr_name对应的取值（首个），支持设置调用prehook回调
     def set_iface_attr(self, ifaceobj, attr_name, attr_valsetfunc,
                        prehook=None, prehookargs=None):
+        #接口名称，及配置属性对应的配置值
         ifacename = ifaceobj.name
         attrvalue = ifaceobj.get_attr_value_first(attr_name)
         if attrvalue:
             if prehook:
+                #调用属性设置前钩子
                 if prehookargs:
                     prehook(prehookargs)
                 else:
                     prehook(ifacename)
+            #调用属性设置函数
             attr_valsetfunc(ifacename, attrvalue)
 
     def query_n_update_ifaceobjcurr_attr(self, ifaceobj, ifaceobjcurr,
@@ -396,6 +403,7 @@ class moduleBase(object):
         except:
             return None
 
+    #返回各mod对应的_modinfo变量
     def get_modinfo(self):
         """ return module info """
         try:

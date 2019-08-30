@@ -1116,6 +1116,7 @@ class LinkUtils(utilsBase):
         self.write_file('/sys/class/net/%s/mtu' % ifacename, mtu)
         self._cache_update([ifacename, 'mtu'], mtu)
 
+    #设置接口别名
     def link_set_alias(self, ifacename, alias):
         self.write_file('/sys/class/net/%s/ifalias' % ifacename,
                         '\n' if not alias else alias)
@@ -1462,17 +1463,21 @@ class LinkUtils(utilsBase):
     def link_create(self, ifacename, t, attrs={}):
         """ generic link_create function """
         if self.link_exists(ifacename):
+            # link已存在，直接返回
             return
         cmd = 'link add'
         cmd += ' name %s type %s' % (ifacename, t)
+        # 添加link对应的key,value
         if attrs:
             for k, v in attrs.iteritems():
                 cmd += ' %s' % k
                 if v:
                     cmd += ' %s' % v
+        #处于批处理模式，加入待处理
         if LinkUtils.ipbatch and not LinkUtils.ipbatch_pause:
             self.add_to_batch(cmd)
         else:
+            #直接运行命令
             utils.exec_command('%s %s' % (utils.ip_cmd, cmd))
         self._cache_update([ifacename], {})
 

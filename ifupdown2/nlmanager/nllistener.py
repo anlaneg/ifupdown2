@@ -61,6 +61,7 @@ class NetlinkListener(Thread):
         # be sent via the SERVICE_ERROR event
         self.error_notification = error_notification
 
+        #支持newlink,dellink,newaddr,deladdr,netneigh等事件
         self.supported_messages = [RTM_NEWLINK, RTM_DELLINK, RTM_NEWADDR,
                                    RTM_DELADDR, RTM_NEWNEIGH, RTM_DELNEIGH,
                                    RTM_NEWROUTE, RTM_DELROUTE]
@@ -123,6 +124,7 @@ class NetlinkListener(Thread):
 
             # Only block for 1 second so we can wake up to see if shutdown_event is set
             try:
+                #读取sockets事件
                 (readable, writeable, exceptional) = select(my_sockets, [], my_sockets, 1)
             except Exception as e:
                 log.error('select() error: ' + str(e))
@@ -135,6 +137,7 @@ class NetlinkListener(Thread):
             set_overrun = False
             set_tx_socket_rxed_ack_alarm = False
 
+            #读事件处理
             for s in readable:
                 data = []
 
@@ -181,12 +184,14 @@ class NetlinkListener(Thread):
 
                     # Put the message on the manager's netlinkq
                     if msgtype in self.supported_messages:
+                        # 消息类型为支持的,将其加入netlink queue里
                         set_alarm = True
                         manager.netlinkq.append((msgtype, length, flags, seq, pid, data[0:length]))
 
                     # There are certain message types we do not care about
                     # (RTM_GETs for example)
                     elif msgtype in self.ignore_messages:
+                        #丢弃不关心的消息
                         pass
 
                     # And there are certain message types we have not added

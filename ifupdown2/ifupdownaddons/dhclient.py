@@ -13,7 +13,7 @@ except ImportError:
     from ifupdown.utils import utils
     from ifupdownaddons.utilsbase import *
 
-
+#通过dhclient获取ip地址
 class dhclient(utilsBase):
     """ This class contains helper methods to interact with the dhclient
     utility """
@@ -27,6 +27,7 @@ class dhclient(utilsBase):
             return False
         return True
 
+    #检查进程是否在运行
     def is_running(self, ifacename):
         return self._pid_exists('/run/dhclient.%s.pid' %ifacename)
 
@@ -57,6 +58,7 @@ class dhclient(utilsBase):
                    '%s' %ifacename]
         self._run_dhclient_cmd(cmd, cmd_prefix)
 
+    #获取ip地址
     def start(self, ifacename, wait=True, cmd_prefix=None):
         if os.path.exists('/sbin/dhclient3'):
             cmd = ['/sbin/dhclient3', '-pf',
@@ -72,6 +74,7 @@ class dhclient(utilsBase):
             cmd.append('-nw')
         self._run_dhclient_cmd(cmd, cmd_prefix)
 
+    #续租
     def release(self, ifacename, cmd_prefix=None):
         if os.path.exists('/sbin/dhclient3'):
             cmd = ['/sbin/dhclient3', '-r', '-pf',

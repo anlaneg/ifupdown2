@@ -81,6 +81,7 @@ class ifaceScheduler():
                 query_ifaceobj.set_state_n_status(ifaceState.from_str(op),
                                                   ifaceStatus.NOTFOUND)
                 return
+        
         #遍历每个op对应的module
         for mname in ifupdownobj.module_ops.get(op):
             m = ifupdownobj.modules.get(mname)
@@ -100,6 +101,7 @@ class ifaceScheduler():
                               ifaceobj_getfunc=ifupdownobj.get_ifaceobjs)
                     else:
                         ifupdownobj.logger.debug(msg)
+                        #传入obj,操作，通过name获取ifaceobj的函数
                         m.run(ifaceobj, op,
                               ifaceobj_getfunc=ifupdownobj.get_ifaceobjs)
             except Exception, e:

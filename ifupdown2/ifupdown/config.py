@@ -14,6 +14,7 @@ import resource
 IFUPDOWN2_ADDON_DROPIN_FOLDER = '/usr/share/ifupdown2/addons'
 
 try:
+    # 更新addon目录
     # ifupdown2/ifupdown/config.py -> we need to use dirname twice.
     ADDON_MODULES_DIR = ['%s/addons' % (os.path.dirname(os.path.dirname(os.path.realpath(__file__))))]
 
